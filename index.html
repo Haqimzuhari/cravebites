@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Crave Bites</title>
+	<link rel="icon" type="image/png" href="assets/favicon.png">
+	
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=TASA+Explorer:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	<style>
+		* {
+			font-family: 'TASA Explorer', serif !important;
+		}
+		[x-cloak] {
+			display: none !important;
+		}
+	</style>
+</head>
+
+<body class="bg-orange-50">
+    <div class="min-h-screen flex" x-data="productStore()">
+        <!-- Main Content Area -->
+        <div class="flex-1">
+            <!-- Header -->
+            <header class="px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <img src="assets/logo.png" alt="Crave Bites Logo" class="w-8 h-8 rounded-lg" id="logo">
+                        <div>
+                            <h1 class="text-lg font-bold text-gray-800">Crave Bites</h1>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Promo Banner Carousel -->
+            <div class="px-6 py-4">
+                <div class="relative w-full h-80 rounded-2xl overflow-hidden shadow-lg">
+                    <!-- Banner Images -->
+                    <div class="relative w-full h-full">
+                        <template x-for="(banner, index) in banners" :key="index">
+                            <div x-show="currentBannerIndex === index" 
+                                 x-transition:enter="transition ease-in-out duration-500" 
+                                 x-transition:enter-start="opacity-0 transform translate-x-full" 
+                                 x-transition:enter-end="opacity-100 transform translate-x-0"
+                                 x-transition:leave="transition ease-in-out duration-500" 
+                                 x-transition:leave-start="opacity-100 transform translate-x-0" 
+                                 x-transition:leave-end="opacity-0 transform -translate-x-full"
+                                 class="absolute inset-0">
+                                <img :src="banner" :alt="'Promo Banner ' + (index + 1)" class="w-full h-full object-cover">
+                                <!-- Optional overlay for better text readability -->
+                                <div class="absolute inset-0 bg-black bg-opacity-20"></div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Navigation Arrows -->
+                    <button @click="prevBanner()" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all">
+                        <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <button @click="nextBanner()" class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all">
+                        <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Dots Indicator -->
+                    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                        <template x-for="(banner, index) in banners" :key="index">
+                            <button @click="goToBanner(index)" 
+                                    :class="currentBannerIndex === index ? 'bg-white' : 'bg-white bg-opacity-50'"
+                                    class="w-2 h-2 rounded-full transition-all hover:bg-opacity-80">
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Items Grid -->
+            <div class="px-6 py-6 grid grid-cols-2 lg:grid-cols-4 gap-4" id="menu-list">
+                <template x-for="product in products" :key="product.id">
+                    <div class="bg-white rounded-3xl p-4 relative border-2 border-transparent hover:border-emerald-700 transition menu-item group">
+                        <div class="flex justify-center mb-3 menu-image-container h-56">
+                            <img :src="'assets/products/' + product.image" :alt="product.name" class="menu-image group-hover:scale-105 transition">
+                        </div>
+                        <div>
+                            <div class="flex flex-col menu-label-container space-y-4">
+                                <p class="menu-name font-black" x-text="product.name"></p>
+                                <div class="flex items-center justify-between">
+                                    <p class="menu-price font-bold text-neutral-600"><span class="font-extralight">RM</span> <span x-text="product.price"></span></p>
+                                    <div>
+                                        <button @click="addToCart(product)" class="add-to-cart-button rounded-full border border-emerald-800 bg-white font-light text-emerald-800 px-4 py-1 text-sm cursor-pointer hover:bg-emerald-800 hover:text-white transition">Add to cart</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Order Panel -->
+        <div class="w-80 bg-white shadow-lg">
+            <!-- Order Header -->
+            <div class="p-6 border-b border-gray-200 space-y-4">
+                <p class="text-lg font-bold">Order Form</p>
+                
+                <!-- Order Form -->
+                <form id="order-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
+                        <input type="text" x-model="customerForm.customerName" name="customerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter customer name" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address 1</label>
+                        <input type="text" x-model="customerForm.address1" name="address1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Street address" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Address 2</label>
+                        <input type="text" x-model="customerForm.address2" name="address2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Apartment, suite, etc. (optional)">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Postcode</label>
+                            <input type="text" x-model="customerForm.postcode" name="postcode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="12345" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
+                            <input type="text" x-model="customerForm.city" name="city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="City" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">State</label>
+                        <select x-model="customerForm.state" name="state" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                            <option value="">Select State</option>
+                            <option value="Johor">Johor</option>
+                            <option value="Kedah">Kedah</option>
+                            <option value="Kelantan">Kelantan</option>
+                            <option value="Kuala Lumpur">Kuala Lumpur</option>
+                            <option value="Labuan">Labuan</option>
+                            <option value="Melaka">Melaka</option>
+                            <option value="Negeri Sembilan">Negeri Sembilan</option>
+                            <option value="Pahang">Pahang</option>
+                            <option value="Penang">Penang</option>
+                            <option value="Perak">Perak</option>
+                            <option value="Perlis">Perlis</option>
+                            <option value="Putrajaya">Putrajaya</option>
+                            <option value="Sabah">Sabah</option>
+                            <option value="Sarawak">Sarawak</option>
+                            <option value="Selangor">Selangor</option>
+                            <option value="Terengganu">Terengganu</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Order List -->
+            <div class="p-6">
+				<p class="text-lg font-bold">Order List</p>
+                
+                <!-- Order Items -->
+                <div class="space-y-4" x-show="cart.length > 0">
+                    <template x-for="item in cart" :key="item.id">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <img :src="'assets/products/' + item.image" :alt="item.name" class="w-12 h-12 bg-white rounded-lg object-cover">
+                                <div>
+                                    <h4 class="font-medium text-gray-800" x-text="item.name"></h4>
+                                    <p class="text-sm text-gray-600">RM <span x-text="item.price.toFixed(2)"></span> x<span x-text="item.quantity"></span></p>
+                                    <p class="text-xs text-green-600">Total: RM <span x-text="(item.price * item.quantity).toFixed(2)"></span></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button @click="removeFromCart(item.id)" class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-sm hover:bg-red-200 transition">-</button>
+                                <span class="text-sm font-medium" x-text="item.quantity"></span>
+                                <button @click="increaseQuantity(item.id)" class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm hover:bg-green-200 transition">+</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Empty cart message -->
+                <div x-show="cart.length === 0" class="text-center text-gray-500 py-8">
+                    <p>Your cart is empty</p>
+                    <p class="text-sm">Add items from the menu</p>
+                </div>
+
+                <!-- Payment Details -->
+                <div class="mt-8 pt-6 border-t border-gray-200" x-show="cart.length > 0">
+                    <h3 class="font-semibold text-gray-800 mb-4">Payment Details</h3>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between font-semibold text-lg pt-2 border-t border-gray-200">
+                            <span class="text-gray-800">Total</span>
+                            <span class="text-gray-800">RM <span x-text="totalPrice"></span></span>
+                        </div>
+                    </div>
+
+                    <button @click="completeOrder()" 
+                            :disabled="!canCompleteOrder"
+                            :class="canCompleteOrder ? 'bg-green-700 hover:bg-green-800 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'" 
+                            class="w-full mt-6 py-3 text-white rounded-lg font-semibold transition-colors">
+                        Complete Order
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Summary Modal -->
+        <div x-show="showModal" x-cloak class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" @click.self="closeModal()">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden">
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 text-white">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">Order Summary</h2>
+                        <button @click="closeModal()" class="text-white hover:text-gray-200 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                    <!-- Customer Details -->
+                    <div class="mb-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-emerald-100 p-2 rounded-full mr-3">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">Customer Details</h3>
+                        </div>
+                        
+                        <div class="rounded-xl p-4 space-y-3">
+                            <div class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-700 w-20">Name:</span>
+                                <span class="text-gray-900 flex-1 text-right" x-text="customerForm.customerName"></span>
+                            </div>
+                            <div class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-700 w-20">Address:</span>
+                                <span class="text-gray-900 flex-1 text-right" x-text="customerForm.address1"></span>
+                            </div>
+                            <div x-show="customerForm.address2" class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-700 w-20"></span>
+                                <span class="text-gray-600 flex-1 text-right text-sm" x-text="customerForm.address2"></span>
+                            </div>
+                            <div class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-700 w-20">City:</span>
+                                <span class="text-gray-900 flex-1 text-right">
+                                    <span x-text="customerForm.city"></span>, <span x-text="customerForm.postcode"></span>
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-start">
+                                <span class="font-semibold text-gray-700 w-20">State:</span>
+                                <span class="text-gray-900 flex-1 text-right" x-text="customerForm.state"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="border-t border-gray-200 my-6"></div>
+                    
+                    <!-- Order Details -->
+                    <div class="mb-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-emerald-100 p-2 rounded-full mr-3">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.35 2.65c-.14.15-.25.32-.25.5a.5.5 0 00.5.5H16M7 13v4a2 2 0 002 2h4.5m.5-5a2 2 0 112 2 2 2 0 01-2-2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">Order Details</h3>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <template x-for="item in cart" :key="item.id">
+                                <div class="bg-white border border-gray-100 rounded-xl p-4 transition-shadow">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex items-center space-x-4">
+                                            <img :src="'assets/products/' + item.image" :alt="item.name" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-900" x-text="item.name"></p>
+                                                <p class="text-sm text-gray-600">
+                                                    RM <span x-text="item.price.toFixed(2)"></span> × <span x-text="item.quantity"></span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-bold text-lg text-emerald-600">
+                                                RM <span x-text="(item.price * item.quantity).toFixed(2)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-4 mt-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xl font-bold text-gray-800">Total Amount:</span>
+                                <span class="text-2xl font-bold text-emerald-600">RM <span x-text="totalPrice"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Methods -->
+                    <div class="mb-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-emerald-100 p-2 rounded-full mr-3">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800">Payment Method</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 gap-3">
+                            <!-- Maybank -->
+                            <button @click="selectedPaymentMethod = 'maybank'" 
+                                    :class="selectedPaymentMethod === 'maybank' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'border-gray-200 hover:border-gray-300'" 
+                                    class="flex items-center p-4 border-2 rounded-xl transition-all">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg">M</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-semibold text-gray-900">Maybank</p>
+                                        <p class="text-sm text-gray-500">Online Banking</p>
+                                    </div>
+                                </div>
+                                <div x-show="selectedPaymentMethod === 'maybank'" class="text-emerald-600">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <!-- CIMB -->
+                            <button @click="selectedPaymentMethod = 'cimb'" 
+                                    :class="selectedPaymentMethod === 'cimb' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'border-gray-200 hover:border-gray-300'" 
+                                    class="flex items-center p-4 border-2 rounded-xl transition-all">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg">C</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-semibold text-gray-900">CIMB Bank</p>
+                                        <p class="text-sm text-gray-500">Online Banking</p>
+                                    </div>
+                                </div>
+                                <div x-show="selectedPaymentMethod === 'cimb'" class="text-emerald-600">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <!-- Public Bank -->
+                            <button @click="selectedPaymentMethod = 'public'" 
+                                    :class="selectedPaymentMethod === 'public' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'border-gray-200 hover:border-gray-300'" 
+                                    class="flex items-center p-4 border-2 rounded-xl transition-all">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg">P</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-semibold text-gray-900">Public Bank</p>
+                                        <p class="text-sm text-gray-500">Online Banking</p>
+                                    </div>
+                                </div>
+                                <div x-show="selectedPaymentMethod === 'public'" class="text-emerald-600">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <!-- RHB -->
+                            <button @click="selectedPaymentMethod = 'rhb'" 
+                                    :class="selectedPaymentMethod === 'rhb' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'border-gray-200 hover:border-gray-300'" 
+                                    class="flex items-center p-4 border-2 rounded-xl transition-all">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg">R</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-semibold text-gray-900">RHB Bank</p>
+                                        <p class="text-sm text-gray-500">Online Banking</p>
+                                    </div>
+                                </div>
+                                <div x-show="selectedPaymentMethod === 'rhb'" class="text-emerald-600">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <!-- Hong Leong -->
+                            <button @click="selectedPaymentMethod = 'hongleong'" 
+                                    :class="selectedPaymentMethod === 'hongleong' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'border-gray-200 hover:border-gray-300'" 
+                                    class="flex items-center p-4 border-2 rounded-xl transition-all">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+                                        <span class="text-white font-bold text-lg">H</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-semibold text-gray-900">Hong Leong Bank</p>
+                                        <p class="text-sm text-gray-500">Online Banking</p>
+                                    </div>
+                                </div>
+                                <div x-show="selectedPaymentMethod === 'hongleong'" class="text-emerald-600">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal Actions -->
+                <div class="bg-gray-50 px-6 py-4 flex space-x-3">
+                    <button @click="closeModal()" class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 hover:border-gray-400 transition-all">
+                        Cancel
+                    </button>
+                    <button @click="proceedPayment()" 
+                            :disabled="!canProceedPayment"
+                            :class="canProceedPayment ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 transform hover:scale-105 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'" 
+                            class="flex-1 px-6 py-3 text-white font-semibold rounded-xl transition-all shadow-lg">
+                        Proceed Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Modal -->
+        <div x-show="showPaymentModal" x-cloak class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                
+                <!-- Payment Pending State -->
+                <div x-show="paymentStatus === 'pending'" class="p-6">
+                    <!-- Payment Header -->
+                    <div class="text-center mb-6">
+                        <div class="bg-emerald-100 p-4 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                            <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Complete Payment</h2>
+                        <p class="text-gray-600">You will be redirected to <span class="font-semibold" x-text="selectedBankName"></span></p>
+                    </div>
+                    
+                    <!-- Payment Amount -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6 mb-6">
+                        <div class="text-center">
+                            <p class="text-lg text-gray-700 mb-2">Total Amount</p>
+                            <p class="text-4xl font-bold text-emerald-600">RM <span x-text="totalPrice"></span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Method Selected -->
+                    <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-700 font-medium">Payment Method:</span>
+                            <span class="font-semibold text-gray-900" x-text="selectedBankName"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Actions -->
+                    <div class="flex space-x-3">
+                        <button @click="closePaymentModal()" class="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition-all">
+                            Cancel
+                        </button>
+                        <button @click="payNow()" class="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg">
+                            Pay Now
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Processing State -->
+                <div x-show="paymentStatus === 'processing'" class="p-8">
+                    <div class="text-center">
+                        <div class="mb-6">
+                            <!-- Loading Spinner -->
+                            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-600 mx-auto"></div>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Processing Payment</h2>
+                        <p class="text-gray-600 mb-4">Please wait while we process your payment...</p>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <p class="text-sm text-yellow-800">⚠️ Please do not close this window or refresh the page</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success State -->
+                <div x-show="paymentStatus === 'success'">
+                    <!-- Success Header -->
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-bold mb-2">Payment Successful!</h2>
+                        <p class="opacity-90">Your order has been confirmed</p>
+                    </div>
+                    
+                    <div class="p-6">
+                        <!-- Receipt Details -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Receipt</h3>
+                            
+                            <!-- Receipt Info -->
+                            <div class="bg-gray-50 rounded-xl p-4 space-y-3 mb-4">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Receipt No:</span>
+                                    <span class="font-semibold" x-text="receiptNumber"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Payment Method:</span>
+                                    <span class="font-semibold" x-text="selectedBankName"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Status:</span>
+                                    <span class="text-green-600 font-semibold">SUCCESS</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Order Items -->
+                            <div class="border-t border-gray-200 pt-4">
+                                <h4 class="font-semibold text-gray-800 mb-3">Items Purchased</h4>
+                                <div class="space-y-2">
+                                    <template x-for="item in cart" :key="item.id">
+                                        <div class="flex justify-between items-center text-sm">
+                                            <div>
+                                                <span x-text="item.name"></span>
+                                                <span class="text-gray-500">× <span x-text="item.quantity"></span></span>
+                                            </div>
+                                            <span class="font-medium">RM <span x-text="(item.price * item.quantity).toFixed(2)"></span></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <div class="border-t border-gray-200 mt-3 pt-3">
+                                    <div class="flex justify-between items-center font-bold text-lg">
+                                        <span>Total Paid:</span>
+                                        <span class="text-emerald-600">RM <span x-text="totalPrice"></span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Close Button -->
+                        <button @click="closePaymentModal()" class="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function productStore() {
+            return {
+                products: [
+                    {
+                        id: 1,
+                        name: "Dark Chocolate Chip",
+                        price: 6.00,
+                        image: "dark-chocolate-chip.png"
+                    },
+                    {
+                        id: 2,
+                        name: "Durian Cheese",
+                        price: 7.50,
+                        image: "durian-cheese.png"
+                    },
+                    {
+                        id: 3,
+                        name: "Gula Melaka Coconut",
+                        price: 5.50,
+                        image: "gula-melaka-coconut.png"
+                    },
+                    {
+                        id: 4,
+                        name: "Matcha",
+                        price: 6.50,
+                        image: "matcha.png"
+                    },
+                    {
+                        id: 5,
+                        name: "Pandan White Chocolate",
+                        price: 7.00,
+                        image: "pandan-white-chocolate.png"
+                    },
+                    {
+                        id: 6,
+                        name: "Pistachio Kunafa",
+                        price: 8.00,
+                        image: "pistachio-kunafa.png"
+                    },
+                    {
+                        id: 7,
+                        name: "Red Velvet",
+                        price: 6.50,
+                        image: "red-velvet.png"
+                    },
+                    {
+                        id: 8,
+                        name: "Teh Tarik Cream",
+                        price: 7.50,
+                        image: "teh-tarik-cream.png"
+                    }
+                ],
+                cart: [],
+                showModal: false,
+                showPaymentModal: false,
+                paymentStatus: 'pending', // pending, processing, success
+                selectedPaymentMethod: '',
+                receiptNumber: '',
+                currentBannerIndex: 0,
+                banners: [
+                    'assets/banner/promo1.jpg',
+                    'assets/banner/promo2.jpg',
+                    'assets/banner/promo3.jpg'
+                ],
+                customerForm: {
+                    customerName: '',
+                    address1: '',
+                    address2: '',
+                    postcode: '',
+                    city: '',
+                    state: ''
+                },
+                
+                addToCart(product) {
+                    const existingItem = this.cart.find(item => item.id === product.id);
+                    if (existingItem) {
+                        existingItem.quantity += 1;
+                    } else {
+                        this.cart.push({
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            image: product.image,
+                            quantity: 1
+                        });
+                    }
+                },
+                
+                removeFromCart(productId) {
+                    const itemIndex = this.cart.findIndex(item => item.id === productId);
+                    if (itemIndex > -1) {
+                        if (this.cart[itemIndex].quantity > 1) {
+                            this.cart[itemIndex].quantity -= 1;
+                        } else {
+                            this.cart.splice(itemIndex, 1);
+                        }
+                    }
+                },
+                
+                increaseQuantity(productId) {
+                    const item = this.cart.find(item => item.id === productId);
+                    if (item) {
+                        item.quantity += 1;
+                    }
+                },
+                
+                get totalPrice() {
+                    return this.cart.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
+                },
+                
+                get isFormValid() {
+                    return this.customerForm.customerName && 
+                           this.customerForm.address1 && 
+                           this.customerForm.postcode && 
+                           this.customerForm.city && 
+                           this.customerForm.state;
+                },
+                
+                get canCompleteOrder() {
+                    return this.cart.length > 0 && this.isFormValid;
+                },
+                
+                get canProceedPayment() {
+                    return this.selectedPaymentMethod !== '';
+                },
+                
+                completeOrder() {
+                    if (this.canCompleteOrder) {
+                        this.showModal = true;
+                    }
+                },
+                
+                closeModal() {
+                    this.showModal = false;
+                },
+                
+                proceedPayment() {
+                    if (this.canProceedPayment) {
+                        this.showModal = false;
+                        this.showPaymentModal = true;
+                        this.paymentStatus = 'pending';
+                        this.receiptNumber = 'RCP' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                    }
+                },
+                
+                payNow() {
+                    this.paymentStatus = 'processing';
+                    setTimeout(() => {
+                        this.paymentStatus = 'success';
+                    }, 5000);
+                },
+                
+                closePaymentModal() {
+                    this.showPaymentModal = false;
+                    this.paymentStatus = 'pending';
+                    this.selectedPaymentMethod = '';
+                    this.cart = [];
+                    this.customerForm = {
+                        customerName: '',
+                        address1: '',
+                        address2: '',
+                        postcode: '',
+                        city: '',
+                        state: ''
+                    };
+                },
+                
+                get selectedBankName() {
+                    const bankNames = {
+                        'maybank': 'Maybank',
+                        'cimb': 'CIMB Bank',
+                        'public': 'Public Bank',
+                        'rhb': 'RHB Bank',
+                        'hongleong': 'Hong Leong Bank'
+                    };
+                    return bankNames[this.selectedPaymentMethod] || '';
+                },
+                
+                init() {
+                    // Auto-rotate carousel every 3 seconds
+                    setInterval(() => {
+                        this.nextBanner();
+                    }, 3000);
+                },
+                
+                nextBanner() {
+                    this.currentBannerIndex = (this.currentBannerIndex + 1) % this.banners.length;
+                },
+                
+                prevBanner() {
+                    this.currentBannerIndex = this.currentBannerIndex === 0 
+                        ? this.banners.length - 1 
+                        : this.currentBannerIndex - 1;
+                },
+                
+                goToBanner(index) {
+                    this.currentBannerIndex = index;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
